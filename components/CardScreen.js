@@ -5,14 +5,27 @@ import { useFetch } from "../core/hooks/useFetch";
 import { useInput } from "../core/hooks/useInput";
 import { shuffle } from "../util/common";
 import { englishWords } from "../util/words";
+import Modal from "./Modal";
 
 const MAX_ATTEMPTS = 3;
+
+const getEnglishLVL = (correctPercents) => {
+  if (correctPercents < 0.2) return "Elementary level (A1)";
+  else if (correctPercents < 0.4) return "Beginner level (A2)";
+  else if (correctPercents < 0.6) return "Intermediate level (B1)";
+  else if (correctPercents < 0.8) return "Upper-Intermediate level (B2)";
+  else if (correctPercents < 0.9) return "Advanced level (C1)";
+  else if (correctPercents <= 1) return "Proficient level (C2)";
+};
 
 const CardScreen = () => {
   const [selectedWordIndex, setSelectedWordIndex] = useState(0);
   const [words, setWords] = useState([]);
   const [attemptNumber, setAttemptNumber] = useState(1);
   const [isFinished, setIsFinished] = useState(false);
+
+  const [resultModalActive, setResultModalActive] = useState(false);
+
   const results = useRef({
     totalCorrect: 0,
     totalIncorrect: 0,
@@ -33,12 +46,20 @@ const CardScreen = () => {
     wordQuery.refetch();
   }, [selectedWordIndex]);
 
+  const openResultModal = () => {
+    setResultModalActive(true);
+  };
+  const closeResultModal = () => {
+    setResultModalActive(false);
+  };
+
   function correctTranslate() {
     if (selectedWordIndex !== words.length - 1) {
       setSelectedWordIndex((prev) => prev + 1);
       translate.setValue("");
     } else {
       setIsFinished(true);
+      openResultModal(true);
     }
     results.current.details[selectedWordIndex] = {
       text: `  ${words[selectedWordIndex]} - ${wordQuery.data.responseData.translatedText} correct ✅`,
@@ -65,6 +86,7 @@ const CardScreen = () => {
         translate.setValue("");
       } else {
         setIsFinished(true);
+        openResultModal(true);
       }
     }
   }
@@ -88,6 +110,7 @@ const CardScreen = () => {
   if (isFinished) {
     return (
       <>
+        <Modal visible={resultModalActive} onClose={closeResultModal} text={getEnglishLVL(results.current.totalCorrect / words.length)} />
         <ul className="text-gray-100 flex flex-col  text-center items-center gap-4 pt-10">
           {Object.values(results.current.details).map((el, i) => (
             <li key={el.text + i}>{i + 1 + " " + el.text}</li>
@@ -120,7 +143,7 @@ const CardScreen = () => {
 
         <button
           className="px-5 py-1 text-xl text-center text-indigo-300 bg-gray-50
-           hover:bg-gray-200 transition-all ease-in-out duration-300"
+           hover:bg-gray-200 transition-all ease-in-out duration-300 cursor-pointer"
           name="check"
           type="submit"
           disabled={wordQuery.isLoading}>

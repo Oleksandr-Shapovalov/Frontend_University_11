@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.modalContainer {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.35);
+  inset: 0;
+  height: 100vh;
+  width: 100vw;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: all 0.4s ease-in-out;
+
+  &.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modalContent {
+    padding: 20px;
+    background: rgb(216, 216, 216);
+    border-radius: 15px;
+
+    width: min(100%, 400px);
+
+    transition: all 0.4s ease-in-out;
+
+    transform: scale(0);
+
+    &.active {
+      transform: scale(1);
+    }
+  }
+}
