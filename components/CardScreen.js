@@ -1,16 +1,16 @@
 import { ToastContainer, toast } from "react-toastify";
+import randomWords from "random-words";
 import { useEffect, useRef, useState } from "react";
 import { WordService } from "../core/api/wordService";
 import { useFetch } from "../core/hooks/useFetch";
 import { useInput } from "../core/hooks/useInput";
 import { shuffle } from "../util/common";
-import { englishWords } from "../util/words";
 import Modal from "./Modal";
 
 const MAX_ATTEMPTS = 3;
 
 const getEnglishLVL = (correctPercents) => {
-  if (correctPercents < 0.2) return "Elementary level (A1)";
+  if (correctPercents <= 0.2) return "Elementary level (A1)";
   else if (correctPercents < 0.4) return "Beginner level (A2)";
   else if (correctPercents < 0.6) return "Intermediate level (B1)";
   else if (correctPercents < 0.8) return "Upper-Intermediate level (B2)";
@@ -25,6 +25,16 @@ const CardScreen = () => {
   const [isFinished, setIsFinished] = useState(false);
 
   const [resultModalActive, setResultModalActive] = useState(false);
+  const [selectLvlModalActive, setSelectLvlModalActive] = useState(false);
+
+  const [difficultSetting, setDifficultSetting] = useState({
+    levels: [
+      { text: "Primary", words: 10 },
+      { text: "Middle", words: 20 },
+      { text: "Hard", words: 30 },
+    ],
+    selected: null,
+  });
 
   const results = useRef({
     totalCorrect: 0,
@@ -37,11 +47,16 @@ const CardScreen = () => {
   const wordQuery = useFetch(() => WordService.getTranslate(words[selectedWordIndex]), false);
 
   useEffect(() => {
-    const shuffledWords = shuffle(englishWords);
-    setWords(shuffledWords);
+    openSelectLvlModalActive();
   }, []);
 
-  // check if translation correct
+  useEffect(() => {
+    const wordsEng = randomWords({ exactly: difficultSetting.selected?.words || difficultSetting.levels[0].words });
+    console.log(wordsEng);
+    const shuffledWords = shuffle(wordsEng);
+    setWords(shuffledWords);
+  }, [selectLvlModalActive]);
+
   useEffect(() => {
     wordQuery.refetch();
   }, [selectedWordIndex]);
@@ -52,6 +67,16 @@ const CardScreen = () => {
   const closeResultModal = () => {
     setResultModalActive(false);
   };
+
+  function openSelectLvlModalActive() {
+    setSelectLvlModalActive(true);
+  }
+  function closeSelectLvlModalActive() {
+    setSelectLvlModalActive(false);
+  }
+  function selectDifficultyLvl(level) {
+    setDifficultSetting((prev) => ({ levels: [...prev.levels], selected: level }));
+  }
 
   function correctTranslate() {
     if (selectedWordIndex !== words.length - 1) {
@@ -66,6 +91,7 @@ const CardScreen = () => {
       isCorrect: true,
     };
     results.current.totalCorrect++;
+    setAttemptNumber(1);
   }
 
   function incorrectTranslate() {
@@ -110,8 +136,10 @@ const CardScreen = () => {
   if (isFinished) {
     return (
       <>
-        <Modal visible={resultModalActive} onClose={closeResultModal} text={getEnglishLVL(results.current.totalCorrect / words.length)} />
-        <ul className="text-gray-100 flex flex-col  text-center items-center gap-4 pt-10">
+        <Modal visible={resultModalActive} onClose={closeResultModal}>
+          {getEnglishLVL(results.current.totalCorrect / words.length)}
+        </Modal>
+        <ul className="text-gray-100 flex flex-col  text-left max-w-max	mx-auto  gap-4 pt-10 px-2">
           {Object.values(results.current.details).map((el, i) => (
             <li key={el.text + i}>{i + 1 + " " + el.text}</li>
           ))}
@@ -123,6 +151,19 @@ const CardScreen = () => {
 
   return (
     <>
+      <Modal visible={selectLvlModalActive} onClose={closeSelectLvlModalActive}>
+        <ul className="flex flex-col gap-4  text-left max-w-max	mx-auto">
+          {difficultSetting.levels.map((item) => (
+            <li key={item.text}>
+              <label onClick={() => selectDifficultyLvl(item)} htmlFor={item.text + item.words} className="radioContainer flex  gap-3  items-center ">
+                <input type="radio" name="lvl" id={item.text + item.words} />
+                <label htmlFor={item.text + item.words} className="radio pr-2"></label>
+                {`${item.text} (${item.words} words)`}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </Modal>
       <div className="text-center  py-14 text-gray-100 text-6xl capitalize">{words[selectedWordIndex]}</div>
 
       <div className="mx-auto text-gray-200 text-3xl text-center">
@@ -162,7 +203,7 @@ export default CardScreen;
 
 function Results({ totalCorrect, totalIncorrect }) {
   return (
-    <div className="text-gray-100 text-xl mt-14 mx-auto max-w-xs ">
+    <div className="text-gray-100 text-xl mt-14 mx-auto max-w-xs px-2">
       <div>Total Correct : {totalCorrect}</div>
       <div>Total Incorrect : {totalIncorrect}</div>
     </div>
